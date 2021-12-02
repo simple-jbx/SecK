@@ -6,11 +6,8 @@ spring:
   #redis 配置
   redis:
   #服务器地址
-    #host: 104.244.92.198
-    #host: 10.150.207.213
     host: 192.168.152.130
     port: 6379
-    #password: 41512241
     #数据库
     database: 0
     #超时时间
@@ -32,7 +29,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://192.168.152.130:3306/sec_kill_sys?useUnicode=true&useSSL=false&characterEncoding=utf8
     username: root
-    password: 41512241
+    password: xxxxxxx
     hikari:
       #连接池名
       pool-name: DateHikariCP
