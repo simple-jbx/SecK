@@ -1,6 +1,7 @@
 package tech.snnukf.seckillsys.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -29,6 +30,7 @@ import java.util.concurrent.TimeUnit;
  * @date 2021/11/23/ 19:39
  */
 @Component
+@Slf4j
 public class AccessLimitInterceptor implements HandlerInterceptor {
     @Autowired
     private IUserService userService;
@@ -39,6 +41,9 @@ public class AccessLimitInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if(handler instanceof HandlerMethod) {
+            User user = getUser(request, response);
+            UserContext.setUser(user);
+
             HandlerMethod handlerMethod = (HandlerMethod) handler;
             AccessLimit accessLimit = handlerMethod.getMethodAnnotation(AccessLimit.class);
             if(accessLimit == null) {
@@ -48,9 +53,6 @@ public class AccessLimitInterceptor implements HandlerInterceptor {
             int second = accessLimit.second();
             int maxCount = accessLimit.maxCount();
             boolean needLogin = accessLimit.needLogin();
-
-            User user = getUser(request, response);
-            UserContext.setUser(user);
 
             String key = request.getRequestURI();
             if(needLogin) {

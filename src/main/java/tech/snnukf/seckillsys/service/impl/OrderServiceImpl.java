@@ -29,9 +29,6 @@ import tech.snnukf.seckillsys.vo.OrderDetailVo;
 import tech.snnukf.seckillsys.vo.RespBeanEnum;
 
 import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -70,7 +67,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     public Order seckill(User user, GoodsVo goods) {
 
-        ValueOperations valueOperations = redisTemplate.opsForValue();
+        //ValueOperations valueOperations = redisTemplate.opsForValue();
 
         //秒杀商品减库存
         SeckillGoods seckillGoods = seckillGoodsService.getOne(new QueryWrapper<SeckillGoods>()
@@ -80,10 +77,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                 .setSql("stock_count = stock_count - 1").eq("goods_id", goods.getId())
                 .gt("stock_count", 0));
 
-        if(seckillGoods.getStockCount() < 1) {
-            valueOperations.set("isStockEmpty:" + goods.getId(), 0);
-            return null;
-        }
+        //前面Controller层有内存标记 这个会不起作用
+        //if(seckillGoods.getStockCount() < 1) {
+            //valueOperations.set("isStockEmpty:" + goods.getId(), 0);
+            //return null;
+        //}
 
         //生成订单
         Order order = new Order();
@@ -165,7 +163,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public Boolean chechCaptcha(User user, Long goodsId, String captcha) {
+    public Boolean checkCaptcha(User user, Long goodsId, String captcha) {
         if(user == null || goodsId < 0 || StringUtils.isEmpty(captcha)) {
             return false;
         }

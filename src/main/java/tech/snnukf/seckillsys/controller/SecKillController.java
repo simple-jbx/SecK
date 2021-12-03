@@ -71,7 +71,51 @@ public class SecKillController implements InitializingBean {
 
     /**
      * @author simple.jbx
-     * @description 秒杀
+     * @description //没有验证码的测试秒杀接口
+     * @date 11:08 2021/12/3
+     * @param	user
+     * @param	goodsId
+     * @return tech.snnukf.seckillsys.vo.RespBean
+     **/
+    @RequestMapping(value = "/doSeckill", method = RequestMethod.POST)
+    @ResponseBody
+    public RespBean doSeckill(User user, Long goodsId) {
+        if(user == null) {
+            return RespBean.error(RespBeanEnum.SESSION_ERROR);
+        }
+
+        ValueOperations valueOperations = redisTemplate.opsForValue();
+
+        //判断是否重复抢购
+        SeckillOrder seckillOrder = (SeckillOrder)redisTemplate.opsForValue()
+                .get("order:" + user.getId() + ":" + goodsId);
+
+        if(seckillOrder != null) {
+            return RespBean.error(RespBeanEnum.REPEATE_ERROR);
+        }
+
+        //内存标记，减少Redis访问
+        if(EmptyStockMap.get(goodsId)) {
+            return RespBean.error(RespBeanEnum.EMPTY_STOCK);
+        }
+
+        Long stock = (Long) redisTemplate.execute(redisScript, Collections.singletonList("seckillGoods:" + goodsId),
+                Collections.EMPTY_LIST);
+
+        if (stock < 0) {
+            EmptyStockMap.put(goodsId, true);
+            //increment 不是原子操作不能这样  要么不改变 要么设为0
+            //valueOperations.increment("seckillGoods:" + goodsId);
+            return RespBean.error(RespBeanEnum.EMPTY_STOCK);
+        }
+        SeckillMessage seckillMessage = new SeckillMessage(user, goodsId);
+        mqSender.sendSeckillMessage(JsonUtil.object2JsonStr(seckillMessage));
+        return RespBean.success(0);
+    }
+
+    /**
+     * @author simple.jbx
+     * @description 带有地址校验和验证码校验的真实秒杀接口
      * @date 09:43 2021/10/17
      * @param	user
      * @param	goodsId
@@ -84,7 +128,7 @@ public class SecKillController implements InitializingBean {
             return RespBean.error(RespBeanEnum.SESSION_ERROR);
         }
 
-        ValueOperations valueOperations = redisTemplate.opsForValue();
+        //ValueOperations valueOperations = redisTemplate.opsForValue();
 
         boolean check = orderService.checkPath(user, goodsId, path);
         if(!check) {
@@ -104,63 +148,28 @@ public class SecKillController implements InitializingBean {
             return RespBean.error(RespBeanEnum.EMPTY_STOCK);
         }
 
-        //预减库存
-        Long stock = valueOperations.decrement("seckillGoods:" + goodsId);
+        /**
+        //Redis加锁预减库存 需要把握加锁与释放锁的时机
+        Boolean isLock = valueOperations.setIfAbsent("lock", user.getId(),
+                50, TimeUnit.MILLISECONDS);
 
-        if(stock < 0) {
-            valueOperations.increment("seckillGoods:" + goodsId);
+        if(isLock) {
+           //业务代码
+        } else {
+            return RespBean.error(RespBeanEnum.SECKILL_ERROR);
+        }
+         **/
+
+        Long stock = (Long) redisTemplate.execute(redisScript, Collections.singletonList("seckillGoods:" + goodsId),
+                Collections.EMPTY_LIST);
+        if (stock < 0L) {
             EmptyStockMap.put(goodsId, true);
+            //valueOperations.increment("seckillGoods:" + goodsId);
             return RespBean.error(RespBeanEnum.EMPTY_STOCK);
         }
-
         SeckillMessage seckillMessage = new SeckillMessage(user, goodsId);
         mqSender.sendSeckillMessage(JsonUtil.object2JsonStr(seckillMessage));
-
         return RespBean.success(0);
-
-//        //Redis分布式锁预减库存 释放锁得时机不好把握  不如上面那个方法
-//        Boolean isLock = valueOperations.setIfAbsent("lock", user.getId(),
-//                50, TimeUnit.MILLISECONDS);
-//
-//        if(isLock) {
-//            List<String> scriptKeysList = new ArrayList<>(2);
-//            scriptKeysList.add("lock");
-//            scriptKeysList.add("seckillGoods:" + goodsId);
-//            Long stock = (Long) redisTemplate.execute(redisScript, scriptKeysList, user.getId());
-//            if(stock < 0) {
-//                valueOperations.increment("seckillGoods:" + goodsId);
-//                EmptyStockMap.put(goodsId, true);
-//                return RespBean.error(RespBeanEnum.EMPTY_STOCK);
-//            }
-//
-//            SeckillMessage seckillMessage = new SeckillMessage(user, goodsId);
-//            mqSender.sendSeckillMessage(JsonUtil.object2JsonStr(seckillMessage));
-//
-//            return RespBean.success(0);
-//        } else {
-//            return RespBean.error(RespBeanEnum.SECKILL_ERROR);
-//        }
-
-
-//        Order order = orderService.seckill(user, goods);
-
-
-//        GoodsVo goods = goodsService.findGoodsVoByGoodsId(goodsId);
-//
-//        //判断库存
-//        if(goods.getStockCount() < 1) {
-//            return RespBean.error(RespBeanEnum.EMPTY_STOCK);
-//        }
-
-
-//        //判断是否重复抢购
-//        SeckillOrder seckillOrder = seckillOrderService.getOne(new QueryWrapper<SeckillOrder>().eq("user_id",
-//                user.getId()).eq("goods_id", goodsId));
-
-
-//        Order order = orderService.seckill(user, goods);
-//        System.out.println("seckill success");
-//        return RespBean.success(order);
     }
 
     /**
@@ -211,7 +220,7 @@ public class SecKillController implements InitializingBean {
             return RespBean.error(RespBeanEnum.SESSION_ERROR);
         }
 
-        Boolean check = orderService.chechCaptcha(user, goodsId, captcha);
+        Boolean check = orderService.checkCaptcha(user, goodsId, captcha);
         if(!check) {
             return RespBean.error(RespBeanEnum.ERROR_CAPTCHA);
         }

@@ -65,5 +65,5 @@ public interface IOrderService extends IService<Order> {
      * @param	captcha
      * @return java.lang.Boolean
      **/
-    Boolean chechCaptcha(User user, Long goodsId, String captcha);
+    Boolean checkCaptcha(User user, Long goodsId, String captcha);
 }
