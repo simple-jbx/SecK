@@ -1,7 +1,7 @@
 # 秒杀系统
 基于Springboot redis RabbitMQ 等的秒杀系统
 <div align='center'>
-    <img src='./imgs/seckill.svg' width='1600px'>
+    <img src='./imgs/seckill.svg' width='800px'>
 	</br></br>秒杀系统技术点与方案
 </div>
 
