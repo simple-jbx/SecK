@@ -29,7 +29,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://192.168.152.130:3306/sec_kill_sys?useUnicode=true&useSSL=false&characterEncoding=utf8
     username: root
-    password: xxxxxxx
+    password: 41512241
     hikari:
       #连接池名
       pool-name: DateHikariCP
