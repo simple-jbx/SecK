@@ -445,7 +445,7 @@ import javax.validation.constraints.NotNull;
  * @date 2021年10月01日 15:39
  */
 @Data
-public class LoginVo `{
+public class LoginVo {
     @NotNull
     @IsMobile
     private String mobile;
